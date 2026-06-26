@@ -344,7 +344,11 @@ export default function App() {
 
   async function toggleVote(id: string) {
     try {
-      await voteFilm(id, username!);
+      const res = await voteFilm(id, username!);
+      if (!res.ok) {
+        return;
+      }
+
       setVotedIds((prev) => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);
