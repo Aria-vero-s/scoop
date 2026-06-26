@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getFilms, getComments, createFilm, voteFilm, addComment as addCommentApi, deleteFilm, updateFilm } from "./api";
 import { Heart, Plus, Send, Trophy, Trash2, Pencil, Check, X } from "lucide-react";
 
 interface Comment {
@@ -280,83 +281,111 @@ function UsernameGate({ onEnter }: { onEnter: (name: string) => void }) {
   );
 }
 
-const INITIAL_MOVIES: Movie[] = [
-  {
-    id: "m1", title: "Parasite", author: "Léa", votes: 7,
-    comments: [
-      { id: "c1", text: "Un chef-d'œuvre absolu.", author: "Marc" },
-      { id: "c2", text: "D'accord, chef-d'œuvre total.", author: "Sophie" },
-    ],
-    rotation: pickRotation("m1"),
-  },
-  {
-    id: "m2", title: "Dune: Partie II", author: "Thomas", votes: 5,
-    comments: [{ id: "c3", text: "Les visuels sont dingues.", author: "Léa" }],
-    rotation: pickRotation("m2"),
-  },
-  {
-    id: "m3", title: "Perfect Days", author: "Sophie", votes: 3,
-    comments: [],
-    rotation: pickRotation("m3"),
-  },
-  {
-    id: "m4", title: "Oppenheimer", author: "Marc", votes: 4,
-    comments: [],
-    rotation: pickRotation("m4"),
-  },
-];
-
 export default function App() {
+  async function loadData(): Promise<void> {
+    const [films, comments] = await Promise.all([getFilms(), getComments()]);
+
+    const commentsByFilmId = new Map<string, Comment[]>();
+    (comments ?? []).forEach((comment: any) => {
+      const filmId = String(
+        comment.filmId ?? comment.movieId ?? comment.film_id ?? ""
+      );
+      if (!filmId) return;
+      const next = commentsByFilmId.get(filmId) ?? [];
+      next.push({
+        id: String(comment.id ?? crypto.randomUUID()),
+        text: comment.text,
+        author: comment.author ?? comment.username ?? "Anonyme",
+      });
+      commentsByFilmId.set(filmId, next);
+    });
+
+    setMovies(
+      films.map((movie: any) => {
+        const movieId = String(movie.id);
+        return {
+          id: movieId,
+          title: movie.title,
+          author: movie.author,
+          votes: Number(movie.votes),
+          comments: commentsByFilmId.get(movieId) ?? [],
+          rotation: pickRotation(movieId),
+        };
+      })
+    );
+  }
   const [username, setUsername] = useState<string | null>(null);
-  const [movies, setMovies] = useState<Movie[]>(INITIAL_MOVIES);
+  const [movies, setMovies] = useState<Movie[]>([]);
   const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
   const [input, setInput] = useState("");
   const [confirmed, setConfirmed] = useState(false);
-
+  useEffect(() => {
+    loadData();
+  }, []);
   if (!username) return <UsernameGate onEnter={setUsername} />;
 
   const sorted = [...movies].sort((a, b) => b.votes - a.votes);
   const topId = sorted[0]?.id ?? null;
 
-  function addMovie() {
+  async function addMovie() {
     const title = input.trim();
     if (!title) return;
-    const id = crypto.randomUUID();
-    setMovies((prev) => [...prev, { id, title, author: username!, votes: 0, comments: [], rotation: pickRotation(id) }]);
-    setInput("");
-    setConfirmed(true);
-    setTimeout(() => setConfirmed(false), 2200);
+
+    try {
+      await createFilm(title, username!);
+      await loadData();
+      setInput("");
+      setConfirmed(true);
+      setTimeout(() => setConfirmed(false), 2200);
+    } catch (error) {
+      console.error("Failed to create film", error);
+    }
   }
 
-  function toggleVote(id: string) {
-    const hasVoted = votedIds.has(id);
-    setVotedIds((prev) => {
-      const next = new Set(prev);
-      hasVoted ? next.delete(id) : next.add(id);
-      return next;
-    });
-    setMovies((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, votes: m.votes + (hasVoted ? -1 : 1) } : m))
-    );
+  async function toggleVote(id: string) {
+    try {
+      await voteFilm(id, username!);
+      setVotedIds((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Failed to vote", error);
+    }
   }
 
-  function deleteMovie(id: string) {
-    setMovies((prev) => prev.filter((m) => m.id !== id));
-    setVotedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+  async function deleteMovie(id: string) {
+    try {
+      await deleteFilm(id);
+      setVotedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Failed to delete film", error);
+    }
   }
 
-  function editMovie(id: string, newTitle: string) {
-    setMovies((prev) => prev.map((m) => (m.id === id ? { ...m, title: newTitle } : m)));
+  async function editMovie(id: string, newTitle: string) {
+    try {
+      await updateFilm(id, newTitle);
+      await loadData();
+    } catch (error) {
+      console.error("Failed to update film", error);
+    }
   }
 
-  function addComment(id: string, text: string) {
-    setMovies((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? { ...m, comments: [...m.comments, { id: crypto.randomUUID(), text, author: username! }] }
-          : m
-      )
-    );
+  async function addComment(id: string, text: string) {
+    try {
+      await addCommentApi(id, username!, text);
+      await loadData();
+    } catch (error) {
+      console.error("Failed to add comment", error);
+    }
   }
 
   return (

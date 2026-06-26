@@ -13,36 +13,57 @@ export async function getComments() {
   return fetch(`${API_URL}?action=comments`).then(r => r.json());
 }
 
-export async function addFilm(title: string, username: string) {
+export async function createFilm(title: string, username: string) {
   return fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "addFilm",
       title,
-      username
+      username,
     }),
   });
 }
 
-export async function vote(filmId: string, username: string) {
+export async function voteFilm(filmId: string, username: string) {
   return fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "vote",
       filmId,
-      username
+      username,
     }),
   });
 }
 
-export async function comment(filmId: string, username: string, text: string) {
+export async function addComment(filmId: string, username: string, text: string) {
   return fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "comment",
       filmId,
       username,
-      text
+      text,
+    }),
+  });
+}
+
+export async function deleteFilm(filmId: string) {
+  return fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "deleteFilm",
+      filmId,
+    }),
+  });
+}
+
+export async function updateFilm(filmId: string, title: string) {
+  return fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "updateFilm",
+      filmId,
+      title,
     }),
   });
 }
