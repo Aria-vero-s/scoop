@@ -35,11 +35,11 @@ export async function createFilm(title: string, username: string) {
     }),
   });
 
-  if (!result?.ok) {
-    throw new Error(result?.error || "Failed to create film");
+  if (result && typeof result === "object" && "error" in result) {
+    throw new Error(String(result.error));
   }
 
-  return result;
+  return result ?? { ok: true };
 }
 
 export async function voteFilm(filmId: string, username: string) {
