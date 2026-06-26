@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getFilms, getComments, createFilm, voteFilm, addComment as addCommentApi, deleteFilm, updateFilm } from "./api";
+import { getFilms, getComments, createFilm, voteFilm, addComment as addCommentApi, deleteFilm, updateFilm } from "../api";
 import { Heart, Plus, Send, Trophy, Trash2, Pencil, Check, X } from "lucide-react";
 
 interface Comment {
