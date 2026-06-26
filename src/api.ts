@@ -1,5 +1,5 @@
 const ORIGINAL_API_URL =
-  "https://script.google.com/macros/s/AKfycbyuTwtfE8IWFQyji4UgrhBiK3eCwZ18SwldTMP_DmAfMogPMH7mhuR6gAXWmb-NJaG9/exec";
+  "https://script.google.com/macros/s/AKfycbzdkn5HhaYmrtCXiZKX7dpwjdLmF-YnmW5uE6JpKJvck5Y4c3cw8YEIwaM1WiGbnnas/exec";
 
 // Helper to make CORS requests via corsproxy.io
 function fetchViaProxy(url: string, options?: RequestInit) {
