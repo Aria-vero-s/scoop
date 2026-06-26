@@ -1,28 +1,32 @@
 const ORIGINAL_API_URL =
   "https://script.google.com/macros/s/AKfycbzdkn5HhaYmrtCXiZKX7dpwjdLmF-YnmW5uE6JpKJvck5Y4c3cw8YEIwaM1WiGbnnas/exec";
 
-// Helper to make CORS requests via corsproxy.io
-function fetchViaProxy(url: string, options?: RequestInit) {
-  const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-  return fetch(proxiedUrl, options);
+async function requestJson(url: string, options?: RequestInit) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(`Invalid JSON response from ${url}: ${text}`);
+  }
 }
 
 export async function getFilms() {
-  return fetchViaProxy(`${ORIGINAL_API_URL}?action=films`, { mode: 'cors' }).then(r => r.json());
+  return requestJson(`${ORIGINAL_API_URL}?action=films`);
 }
 
 export async function getVotes() {
-  return fetchViaProxy(`${ORIGINAL_API_URL}?action=votes`, { mode: 'cors' }).then(r => r.json());
+  return requestJson(`${ORIGINAL_API_URL}?action=votes`);
 }
 
 export async function getComments() {
-  return fetchViaProxy(`${ORIGINAL_API_URL}?action=comments`, { mode: 'cors' }).then(r => r.json());
+  return requestJson(`${ORIGINAL_API_URL}?action=comments`);
 }
 
 export async function createFilm(title: string, username: string) {
-  return fetchViaProxy(ORIGINAL_API_URL, {
+  const result = await requestJson(ORIGINAL_API_URL, {
     method: "POST",
-    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "addFilm",
@@ -30,12 +34,17 @@ export async function createFilm(title: string, username: string) {
       username,
     }),
   });
+
+  if (!result?.ok) {
+    throw new Error(result?.error || "Failed to create film");
+  }
+
+  return result;
 }
 
 export async function voteFilm(filmId: string, username: string) {
-  return fetchViaProxy(ORIGINAL_API_URL, {
+  const result = await requestJson(ORIGINAL_API_URL, {
     method: "POST",
-    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "vote",
@@ -43,12 +52,17 @@ export async function voteFilm(filmId: string, username: string) {
       username,
     }),
   });
+
+  if (result?.ok === false) {
+    return { ok: false };
+  }
+
+  return { ok: true };
 }
 
 export async function addComment(filmId: string, username: string, text: string) {
-  return fetchViaProxy(ORIGINAL_API_URL, {
+  const result = await requestJson(ORIGINAL_API_URL, {
     method: "POST",
-    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "comment",
@@ -57,24 +71,34 @@ export async function addComment(filmId: string, username: string, text: string)
       text,
     }),
   });
+
+  if (!result?.ok) {
+    throw new Error(result?.error || "Failed to add comment");
+  }
+
+  return result;
 }
 
 export async function deleteFilm(filmId: string) {
-  return fetchViaProxy(ORIGINAL_API_URL, {
+  const result = await requestJson(ORIGINAL_API_URL, {
     method: "POST",
-    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "deleteFilm",
       filmId,
     }),
   });
+
+  if (!result?.ok) {
+    throw new Error(result?.error || "Failed to delete film");
+  }
+
+  return result;
 }
 
 export async function updateFilm(filmId: string, title: string) {
-  return fetchViaProxy(ORIGINAL_API_URL, {
+  const result = await requestJson(ORIGINAL_API_URL, {
     method: "POST",
-    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "updateFilm",
@@ -82,4 +106,10 @@ export async function updateFilm(filmId: string, title: string) {
       title,
     }),
   });
+
+  if (!result?.ok) {
+    throw new Error(result?.error || "Failed to update film");
+  }
+
+  return result;
 }
