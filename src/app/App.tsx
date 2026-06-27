@@ -334,22 +334,24 @@ export default function App() {
     });
 
     setMovies(
-      filmItems.map((movie: any, index: number) => {
-        const payload = movie && typeof movie === "object" ? movie : { id: movie };
-        const movieId = String(payload.id ?? payload[0] ?? index);
-        const title = payload.title ?? payload[1] ?? "";
-        const author = payload.author ?? payload[2] ?? "Anonyme";
-        const votes = Number(payload.votes ?? voteCounts.get(movieId) ?? payload[4] ?? 0);
+      filmItems
+        .map((movie: any, index: number) => {
+          const payload = movie && typeof movie === "object" ? movie : { id: movie };
+          const movieId = String(payload.id ?? payload[0] ?? index);
+          const title = payload.title ?? payload[1] ?? "";
+          const author = payload.author ?? payload[2] ?? "Anonyme";
+          const votes = Number(payload.votes ?? voteCounts.get(movieId) ?? payload[4] ?? 0);
 
-        return {
-          id: movieId,
-          title,
-          author,
-          votes,
-          comments: commentsByFilmId.get(movieId) ?? [],
-          rotation: pickRotation(movieId),
-        };
-      })
+          return {
+            id: movieId,
+            title,
+            author,
+            votes,
+            comments: commentsByFilmId.get(movieId) ?? [],
+            rotation: pickRotation(movieId),
+          };
+        })
+        .sort((a, b) => b.votes - a.votes)
     );
     setVotedIds(userVotedFilmIds);
   }
@@ -362,7 +364,7 @@ export default function App() {
 
   if (!username) return <UsernameGate onEnter={setUsername} />;
 
-  const sorted = [...movies].sort((a, b) => b.votes - a.votes);
+  const sorted = movies;
   const topId = sorted[0]?.id ?? null;
 
   async function addMovie() {
@@ -381,7 +383,7 @@ export default function App() {
 
     const previousMovies = [...movies];
 
-    setMovies((prev) => [optimisticMovie, ...prev]);
+    setMovies((prev) => [...prev, optimisticMovie]);
     setInput("");
     setConfirmed(true);
     setTimeout(() => setConfirmed(false), 2200);
@@ -445,7 +447,6 @@ export default function App() {
 
     try {
       await deleteFilm(id);
-      await loadData();
     } catch (error) {
       setMovies(previousMovies);
       setVotedIds(new Set(previousVotedIds));
@@ -460,7 +461,6 @@ export default function App() {
 
     try {
       await updateFilm(id, newTitle);
-      await loadData();
     } catch (error) {
       setMovies(previousMovies);
       console.error("Failed to update film", error);
@@ -478,7 +478,6 @@ export default function App() {
     );
     try {
       await addCommentApi(id, username!, text);
-      await loadData();
     } catch (error) {
       setMovies((prev) =>
         prev.map((movie) =>
@@ -554,9 +553,9 @@ export default function App() {
             <p className="text-gray-400 font-semibold">Aucun film pour l&apos;instant — soyez le premier !</p>
           </div>
         ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5" style={{ columnFill: "balance" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
             {sorted.map((movie) => (
-              <div key={movie.id} className="mb-5 break-inside-avoid inline-block w-full">
+              <div key={movie.id}>
                 <PostIt
                   movie={movie}
                   isWinner={movie.id === topId && movie.votes > 0}
