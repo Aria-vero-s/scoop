@@ -1,5 +1,5 @@
 const ORIGINAL_API_URL =
-  "https://script.google.com/macros/s/AKfycbweDFqppCsPIMpHkUhnOF0oGco9-AVP0s_su49fAvclLgcClDyRNP5uQ_EEtGeFolJ9/exec";
+  "https://script.google.com/macros/s/AKfycbwEew6lUMvImhcHIddOona90LTU-JhntDhx5lzQT84mCEKa2EsRSDifYfvPvHJwS3a0/exec";
 
 async function requestJson(url: string, options?: RequestInit) {
   const response = await fetch(url, options);
@@ -54,6 +54,24 @@ export async function voteFilm(filmId: string, username: string) {
     headers: JSON_HEADERS,
     body: JSON.stringify({
       action: "vote",
+      filmId,
+      username,
+    }),
+  });
+
+  if (result?.ok === false) {
+    return { ok: false };
+  }
+
+  return { ok: true };
+}
+
+export async function unvoteFilm(filmId: string, username: string) {
+  const result = await requestJson(ORIGINAL_API_URL, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({
+      action: "unvote",
       filmId,
       username,
     }),

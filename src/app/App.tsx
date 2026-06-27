@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getFilms, getComments, getVotes, createFilm, voteFilm, addComment as addCommentApi, deleteFilm, updateFilm } from "../api";
+import { getFilms, getComments, getVotes, createFilm, voteFilm, unvoteFilm, addComment as addCommentApi, deleteFilm, updateFilm } from "../api";
 import { Heart, Plus, Send, Trophy, Trash2, Pencil, Check, X } from "lucide-react";
 
 interface Comment {
@@ -381,42 +381,71 @@ export default function App() {
   }
 
   async function toggleVote(id: string) {
+    const alreadyVoted = votedIds.has(id);
+    const previousVotedIds = new Set(votedIds);
+    const previousMovies = [...movies];
+
+    setVotedIds((prev) => {
+      const next = new Set(prev);
+      alreadyVoted ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+    setMovies((prev) =>
+      prev.map((movie) =>
+        movie.id === id
+          ? { ...movie, votes: Math.max(0, movie.votes + (alreadyVoted ? -1 : 1)) }
+          : movie
+      )
+    );
+
     try {
-      const res = await voteFilm(id, username!);
+      const res = alreadyVoted ? await unvoteFilm(id, username!) : await voteFilm(id, username!);
       if (!res.ok) {
+        setVotedIds(new Set(previousVotedIds));
+        setMovies(previousMovies);
         return;
       }
 
-      setVotedIds((prev) => {
-        const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
-        return next;
-      });
       await loadData();
     } catch (error) {
+      setVotedIds(new Set(previousVotedIds));
+      setMovies(previousMovies);
       console.error("Failed to vote", error);
     }
   }
 
   async function deleteMovie(id: string) {
+    const previousMovies = [...movies];
+    const previousVotedIds = new Set(votedIds);
+
+    setMovies((prev) => prev.filter((movie) => movie.id !== id));
+    setVotedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+
     try {
       await deleteFilm(id);
-      setVotedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
       await loadData();
     } catch (error) {
+      setMovies(previousMovies);
+      setVotedIds(new Set(previousVotedIds));
       console.error("Failed to delete film", error);
     }
   }
 
   async function editMovie(id: string, newTitle: string) {
+    const previousMovies = [...movies];
+
+    setMovies((prev) => prev.map((movie) => (movie.id === id ? { ...movie, title: newTitle } : movie)));
+
     try {
       await updateFilm(id, newTitle);
       await loadData();
     } catch (error) {
+      setMovies(previousMovies);
       console.error("Failed to update film", error);
     }
   }

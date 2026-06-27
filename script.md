@@ -32,6 +32,8 @@ function doPost(e) {
         return addFilm(data);
       case "vote":
         return vote(data);
+      case "unvote":
+        return unvote(data);
       case "comment":
         return addComment(data);
       case "deleteFilm":
@@ -148,6 +150,24 @@ function addComment(d) {
     d.text,
     new Date(),
   ]);
+
+  return json({ ok: true });
+}
+
+function unvote(d) {
+  if (!d.filmId || !d.username) {
+    return json({ error: "missing fields" });
+  }
+
+  const votesSheet = sheet("Votes");
+  const rows = votesSheet.getDataRange().getValues();
+
+  for (let i = rows.length - 1; i > 0; i--) {
+    if (String(rows[i][0]) === String(d.filmId) && String(rows[i][1]) === String(d.username)) {
+      votesSheet.deleteRow(i + 1);
+      break;
+    }
+  }
 
   return json({ ok: true });
 }
