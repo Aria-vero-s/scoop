@@ -369,13 +369,32 @@ export default function App() {
     const title = input.trim();
     if (!title) return;
 
+    const tempId = crypto.randomUUID();
+    const optimisticMovie: Movie = {
+      id: tempId,
+      title,
+      author: username!,
+      votes: 0,
+      comments: [],
+      rotation: pickRotation(tempId),
+    };
+
+    const previousMovies = [...movies];
+
+    setMovies((prev) => [optimisticMovie, ...prev]);
+    setInput("");
+    setConfirmed(true);
+    setTimeout(() => setConfirmed(false), 2200);
+
     try {
-      await createFilm(title, username!);
+      const result = await createFilm(title, username!);
+      if (!result?.ok) {
+        setMovies(previousMovies);
+        return;
+      }
       await loadData();
-      setInput("");
-      setConfirmed(true);
-      setTimeout(() => setConfirmed(false), 2200);
     } catch (error) {
+      setMovies(previousMovies);
       console.error("Failed to create film", error);
     }
   }
@@ -406,8 +425,6 @@ export default function App() {
         setMovies(previousMovies);
         return;
       }
-
-      await loadData();
     } catch (error) {
       setVotedIds(new Set(previousVotedIds));
       setMovies(previousMovies);
@@ -442,8 +459,10 @@ export default function App() {
     setMovies((prev) => prev.map((movie) => (movie.id === id ? { ...movie, title: newTitle } : movie)));
 
     try {
-      await updateFilm(id, newTitle);
-      await loadData();
+      const result = await updateFilm(id, newTitle);
+      if (!result?.ok) {
+        setMovies(previousMovies);
+      }
     } catch (error) {
       setMovies(previousMovies);
       console.error("Failed to update film", error);

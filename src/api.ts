@@ -1,5 +1,5 @@
 const ORIGINAL_API_URL =
-  "https://script.google.com/macros/s/AKfycbwEew6lUMvImhcHIddOona90LTU-JhntDhx5lzQT84mCEKa2EsRSDifYfvPvHJwS3a0/exec";
+  "https://script.google.com/macros/s/AKfycby3mwXZHoNA5Uuskw3bc95-FIfY_QhyyiOgAuv_kvIv7lUsnPODf8URHSTNLmO2lerY/exec";
 
 async function requestJson(url: string, options?: RequestInit) {
   const response = await fetch(url, options);
