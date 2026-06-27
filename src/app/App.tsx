@@ -359,7 +359,7 @@ function UsernameGate({ onEnter }: { onEnter: (name: string) => void }) {
             disabled={!val.trim()}
             className="w-full bg-gray-900 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-base font-black py-3 rounded-2xl transition-colors"
           >
-            Entrer 🎬
+            Entrer
           </button>
         </div>
       </div>
@@ -653,7 +653,7 @@ export default function App() {
 
       {/* Tagline */}
       <div className="max-w-5xl mx-auto px-6 pt-5 pb-6">
-        <p className="text-gray-400 font-semibold text-sm">😊 Proposez vos films et votez !</p>
+        <p className="text-gray-400 font-semibold text-sm">Proposez vos films et votez ! 😊</p>
       </div>
 
       {/* Add movie */}
@@ -690,7 +690,7 @@ export default function App() {
       <div className="max-w-5xl mx-auto px-6 pb-16">
         <div className="flex items-center gap-2 mb-6">
           <span className="text-sm font-black text-gray-600 uppercase tracking-widest">
-            ⭐ {movies.length} film{movies.length !== 1 ? "s" : ""} au total
+            {movies.length} film{movies.length !== 1 ? "s" : ""} au total
           </span>
         </div>
 
