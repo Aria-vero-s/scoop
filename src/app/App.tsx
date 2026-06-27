@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getFilms, getComments, createFilm, voteFilm, addComment as addCommentApi, deleteFilm, updateFilm } from "../api";
+import { getFilms, getComments, getVotes, createFilm, voteFilm, addComment as addCommentApi, deleteFilm, updateFilm } from "../api";
 import { Heart, Plus, Send, Trophy, Trash2, Pencil, Check, X } from "lucide-react";
 
 interface Comment {
@@ -282,10 +282,16 @@ function UsernameGate({ onEnter }: { onEnter: (name: string) => void }) {
 }
 
 export default function App() {
+  const [username, setUsername] = useState<string | null>(null);
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
+  const [input, setInput] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+
   async function loadData(): Promise<void> {
-    const [films, comments] = await Promise.all([getFilms(), getComments()]);
+    const [films, comments, votes] = await Promise.all([getFilms(), getComments(), getVotes()]);
 
-    const normalizeFilms = (value: any): any[] => {
+    const normalizeItems = (value: any): any[] => {
       if (Array.isArray(value)) return value;
       if (value && typeof value === "object") {
         if (Array.isArray((value as any).items)) return (value as any).items;
@@ -294,17 +300,9 @@ export default function App() {
       return [];
     };
 
-    const normalizeComments = (value: any): any[] => {
-      if (Array.isArray(value)) return value;
-      if (value && typeof value === "object") {
-        if (Array.isArray((value as any).items)) return (value as any).items;
-        if (Array.isArray((value as any).rows)) return (value as any).rows;
-      }
-      return [];
-    };
-
-    const filmItems = normalizeFilms(films);
-    const commentItems = normalizeComments(comments);
+    const filmItems = normalizeItems(films);
+    const commentItems = normalizeItems(comments);
+    const voteItems = normalizeItems(votes);
 
     const commentsByFilmId = new Map<string, Comment[]>();
     commentItems.forEach((comment: any) => {
@@ -321,13 +319,27 @@ export default function App() {
       commentsByFilmId.set(filmId, next);
     });
 
+    const voteCounts = new Map<string, number>();
+    const userVotedFilmIds = new Set<string>();
+
+    voteItems.forEach((vote: any) => {
+      const filmId = String(vote.filmId ?? vote.movieId ?? vote.film_id ?? vote[0] ?? "");
+      if (!filmId) return;
+      voteCounts.set(filmId, (voteCounts.get(filmId) ?? 0) + 1);
+
+      const voteAuthor = String(vote.username ?? vote.author ?? vote[1] ?? "");
+      if (voteAuthor && username && voteAuthor === username) {
+        userVotedFilmIds.add(filmId);
+      }
+    });
+
     setMovies(
       filmItems.map((movie: any, index: number) => {
         const payload = movie && typeof movie === "object" ? movie : { id: movie };
         const movieId = String(payload.id ?? payload[0] ?? index);
         const title = payload.title ?? payload[1] ?? "";
         const author = payload.author ?? payload[2] ?? "Anonyme";
-        const votes = Number(payload.votes ?? payload[4] ?? 0);
+        const votes = Number(payload.votes ?? voteCounts.get(movieId) ?? payload[4] ?? 0);
 
         return {
           id: movieId,
@@ -339,15 +351,15 @@ export default function App() {
         };
       })
     );
+    setVotedIds(userVotedFilmIds);
   }
-  const [username, setUsername] = useState<string | null>(null);
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
-  const [input, setInput] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
+
   useEffect(() => {
-    loadData();
-  }, []);
+    if (username) {
+      void loadData();
+    }
+  }, [username]);
+
   if (!username) return <UsernameGate onEnter={setUsername} />;
 
   const sorted = [...movies].sort((a, b) => b.votes - a.votes);
