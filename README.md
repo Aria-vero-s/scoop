@@ -128,4 +128,4 @@ src/
 
 ---
 
-**Créé avec ❤️ pour vos soirées ciné **
+**Créé avec ❤️ pour vos soirées ciné**
