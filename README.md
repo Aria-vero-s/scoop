@@ -104,19 +104,6 @@ Le projet est configuré en mode test (lecture/écriture publique). Pour product
 
 ---
 
-## Déploiement
-
-Le projet se déploie automatiquement sur GitHub Pages via GitHub Actions :
-
-1. Pushez vos changements sur la branche `main`
-2. GitHub Actions build automatiquement le projet
-3. Le dossier `docs/` est mis à jour et committé
-4. GitHub Pages publie depuis `docs/` sur `main`
-
-**Note** : `docs/` est dans `.gitignore` localement pour éviter les conflits.
-
----
-
 ## Structure du Projet
 
 ```
