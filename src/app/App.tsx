@@ -145,6 +145,10 @@ function PostIt({
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState(movie.title);
 
+  useEffect(() => {
+    if (!editing) setEditVal(movie.title);
+  }, [movie.title]);
+
   function confirmEdit() {
     const t = editVal.trim();
     if (t) onEdit(t);
@@ -553,9 +557,9 @@ export default function App() {
             <p className="text-gray-400 font-semibold">Aucun film pour l&apos;instant — soyez le premier !</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5">
             {sorted.map((movie) => (
-              <div key={movie.id}>
+              <div key={movie.id} className="mb-5 break-inside-avoid inline-block w-full">
                 <PostIt
                   movie={movie}
                   isWinner={movie.id === topId && movie.votes > 0}
