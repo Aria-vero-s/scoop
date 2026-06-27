@@ -69,8 +69,6 @@ Une application collaborative pour choisir le film de la soirée ! Proposez des 
 
 Le projet utilise Firebase Realtime Database en mode REST (pas de SDK).
 
-**URL actuelle** : `https://movie-night-c8c26-default-rtdb.europe-west1.firebasedatabase.app/`
-
 ### Structure de données
 
 ```
