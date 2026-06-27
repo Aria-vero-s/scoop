@@ -10,6 +10,7 @@ interface Comment {
 
 interface Movie {
   id: string;
+  stableKey: string;
   title: string;
   author: string;
   votes: number;
@@ -87,6 +88,7 @@ function CommentItem({ comment, isOwn, onDelete, onEdit }: {
 }) {
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState(comment.text);
+  const [hovering, setHovering] = useState(false);
 
   useEffect(() => {
     if (!editing) setEditVal(comment.text);
@@ -99,7 +101,11 @@ function CommentItem({ comment, isOwn, onDelete, onEdit }: {
   }
 
   return (
-    <li className="text-xs text-gray-600 leading-relaxed group flex items-start gap-1">
+    <li
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      className="text-xs text-gray-600 leading-relaxed flex items-start gap-1"
+    >
       {editing ? (
         <div className="flex items-center gap-1 flex-1">
           <input
@@ -123,8 +129,8 @@ function CommentItem({ comment, isOwn, onDelete, onEdit }: {
             <span className="text-gray-400 mx-1">·</span>
             {comment.text}
           </span>
-          {isOwn && (
-            <span className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {isOwn && hovering && (
+            <span className="flex items-center gap-0.5 flex-shrink-0">
               <button onClick={() => setEditing(true)} className="text-gray-400 hover:text-gray-700 p-0.5"><Pencil size={9} /></button>
               <button onClick={onDelete} className="text-gray-400 hover:text-rose-500 p-0.5"><Trash2 size={9} /></button>
             </span>
@@ -424,6 +430,7 @@ export default function App() {
 
           return {
             id: movieId,
+            stableKey: movieId,
             title,
             author,
             votes,
@@ -445,7 +452,8 @@ export default function App() {
   if (!username) return <UsernameGate onEnter={setUsername} />;
 
   const sorted = movies;
-  const topId = sorted[0]?.id ?? null;
+  const maxVotes = movies.reduce((max, m) => Math.max(max, m.votes), 0);
+  const topId = maxVotes > 0 ? (movies.find((m) => m.votes === maxVotes)?.id ?? null) : null;
 
   async function addMovie() {
     const title = input.trim();
@@ -454,6 +462,7 @@ export default function App() {
     const tempId = crypto.randomUUID();
     const optimisticMovie: Movie = {
       id: tempId,
+      stableKey: tempId,
       title,
       author: username!,
       votes: 0,
@@ -693,7 +702,7 @@ export default function App() {
         ) : (
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-5">
             {sorted.map((movie) => (
-              <div key={movie.id} className="mb-5 break-inside-avoid inline-block w-full">
+              <div key={movie.stableKey} className="mb-5 break-inside-avoid inline-block w-full">
                 <PostIt
                   movie={movie}
                   isWinner={movie.id === topId && movie.votes > 0}
