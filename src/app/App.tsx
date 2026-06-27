@@ -483,10 +483,10 @@ export default function App() {
         setMovies(previousMovies);
         return;
       }
-      // Replace temp ID with real Firebase ID in-place (no loadData, no reorder)
+      // Replace temp ID with real Firebase ID in-place (keep rotation stable)
       setMovies((prev) =>
         prev.map((m) =>
-          m.id === tempId ? { ...m, id: result.id, rotation: pickRotation(result.id) } : m
+          m.id === tempId ? { ...m, id: result.id } : m
         )
       );
     } catch (error) {
