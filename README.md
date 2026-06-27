@@ -2,7 +2,7 @@
 
 Une application collaborative pour choisir le film de la soirée ! Proposez des films, votez pour vos préférés, et laissez des commentaires.
 
-**🔗 Démo en ligne :** [aria-vero-s.github.io/movie-night](https://aria-vero-s.github.io/movie-night/)
+**Démo en ligne :** [aria-vero-s.github.io/movie-night](https://aria-vero-s.github.io/movie-night/)
 
 ---
 
@@ -28,7 +28,7 @@ Une application collaborative pour choisir le film de la soirée ! Proposez des 
 
 ---
 
-## 🚀 Installation & Développement
+## Installation & Développement
 
 ### Prérequis
 - Node.js 18+ et pnpm
@@ -60,7 +60,7 @@ Une application collaborative pour choisir le film de la soirée ! Proposez des 
 
 ---
 
-## 🔥 Configuration Firebase
+## Configuration Firebase
 
 Le projet utilise Firebase Realtime Database en mode REST (pas de SDK).
 
@@ -101,7 +101,7 @@ Le projet est configuré en mode test (lecture/écriture publique). Pour product
 
 ---
 
-## 📦 Déploiement
+## Déploiement
 
 Le projet se déploie automatiquement sur GitHub Pages via GitHub Actions :
 
@@ -114,7 +114,7 @@ Le projet se déploie automatiquement sur GitHub Pages via GitHub Actions :
 
 ---
 
-## 🎨 Structure du Projet
+## Structure du Projet
 
 ```
 src/
@@ -128,26 +128,4 @@ src/
 
 ---
 
-## 🐛 Débogage
-
-Si les opérations CRUD ne fonctionnent pas :
-
-1. **Ouvrez la console du navigateur** (F12) et vérifiez les erreurs
-2. **Vérifiez que Firebase est accessible** : visitez `https://movie-night-c8c26-default-rtdb.europe-west1.firebasedatabase.app/films.json`
-3. **Vérifiez les règles Firebase** — Elles doivent autoriser l'écriture publique (mode test)
-4. **Videz le cache** si vous voyez une ancienne version
-
-**Erreurs courantes** :
-- `401 Unauthorized` → Règles Firebase trop restrictives
-- `CORS error` → Devrait être géré automatiquement par Firebase
-- Post-its qui disparaissent → Vérifiez la console pour des erreurs d'API
-
----
-
-## 📝 Licence
-
-MIT — Faites-en ce que vous voulez !
-
----
-
-**Créé avec ❤️ pour vos soirées ciné 🎬**
+**Créé avec ❤️ pour vos soirées ciné **
