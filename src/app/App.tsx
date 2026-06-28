@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getFilms, getComments, getVotes, createFilm, voteFilm, unvoteFilm, addComment as addFilmCommentApi, deleteComment as deleteFilmCommentApi, updateComment as updateFilmCommentApi, deleteFilm, updateFilm, getIdeas, getIdeaComments, createIdea, addIdeaComment as addIdeaCommentApi, deleteIdeaComment as deleteIdeaCommentApi, updateIdeaComment as updateIdeaCommentApi, deleteIdea, updateIdea } from "../api";
 import { Heart, Plus, Send, Trophy, Trash2, Pencil, Check, X } from "lucide-react";
 
@@ -347,8 +347,23 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
 
   useEffect(() => { void loadData(); }, []);
 
-  const maxVotes = movies.reduce((max, m) => Math.max(max, m.votes), 0);
-  const topId = maxVotes > 0 ? (movies.find((m) => m.votes === maxVotes)?.id ?? null) : null;
+  const maxVotes = useMemo(() => movies.reduce((max, m) => Math.max(max, m.votes), 0), [movies]);
+  const winnerMovieIds = useMemo(() => {
+    if (maxVotes <= 0) return new Set<string>();
+    return new Set(movies.filter((movie) => movie.votes === maxVotes).map((movie) => movie.id));
+  }, [movies, maxVotes]);
+  const sortedMovies = useMemo(() => {
+    return movies
+      .map((movie, index) => ({ movie, index }))
+      .sort((a, b) => {
+        const aIsWinner = winnerMovieIds.has(a.movie.id);
+        const bIsWinner = winnerMovieIds.has(b.movie.id);
+        if (aIsWinner !== bIsWinner) return aIsWinner ? -1 : 1;
+        if (a.movie.votes !== b.movie.votes) return b.movie.votes - a.movie.votes;
+        return a.index - b.index;
+      })
+      .map(({ movie }) => movie);
+  }, [movies, winnerMovieIds]);
 
   async function addMovie() {
     const title = input.trim();
@@ -471,9 +486,9 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
           </div>
         ) : (
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-5" style={{ columnFill: "balance" }}>
-            {movies.map((movie) => (
+            {sortedMovies.map((movie) => (
               <div key={movie.stableKey} className="mb-5 break-inside-avoid block w-full">
-                <MoviePostIt movie={movie} isWinner={movie.id === topId && movie.votes > 0} isOwner={movie.author === username} voted={votedIds.has(movie.id)} username={username}
+                <MoviePostIt movie={movie} isWinner={winnerMovieIds.has(movie.id)} isOwner={movie.author === username} voted={votedIds.has(movie.id)} username={username}
                   onToggleVote={() => toggleVote(movie.id)} onComment={(t) => addComment(movie.id, t)} onDelete={() => deleteMovie(movie.id)} onEdit={(t) => editMovie(movie.id, t)}
                   onDeleteComment={(commentId) => deleteCommentFromFilm(movie.id, commentId)} onEditComment={(commentId, newText) => editCommentInFilm(movie.id, commentId, newText)}
                 />
