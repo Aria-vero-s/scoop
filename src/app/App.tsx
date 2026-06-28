@@ -190,34 +190,44 @@ function TopBar({
   icon,
   title,
   username,
+  tagline,
   switchLabel,
   onSwitch,
 }: {
   icon: string;
   title: string;
   username: string;
+  tagline: string;
   switchLabel: string;
   onSwitch: () => void;
 }) {
   return (
-    <div className="max-w-5xl mx-auto px-6 pt-8 pb-0 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="text-2xl leading-none">{icon}</span>
-        <span className="text-xl font-black text-gray-900 tracking-tight">{title}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onSwitch}
-          className="flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-full px-3 py-1.5 transition-colors"
-        >
-          Aller sur {switchLabel}
-        </button>
-        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-full px-4 py-1.5">
-          <span className="text-base leading-none">👋</span>
-          <span className="text-sm font-bold text-gray-700">{username}</span>
+    <>
+      <div className="w-full bg-gray-50 border-b border-gray-100 py-4">
+        <div className="max-w-5xl mx-auto px-6 flex justify-end">
+          <button
+            onClick={onSwitch}
+            className="text-sm font-black text-gray-600 uppercase tracking-widest hover:text-gray-800 transition-colors"
+          >
+            Aller sur {switchLabel}
+          </button>
         </div>
       </div>
-    </div>
+
+      <div className="max-w-5xl mx-auto px-6 pt-8">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-2xl leading-none">{icon}</span>
+            <span className="text-xl font-black text-gray-900 tracking-tight truncate">{title}</span>
+          </div>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-full px-4 py-1.5 shrink-0">
+            <span className="text-base leading-none">👋</span>
+            <span className="text-sm font-bold text-gray-700">{username}</span>
+          </div>
+        </div>
+        <p className="mt-3 text-sm font-semibold text-gray-600">{tagline}</p>
+      </div>
+    </>
   );
 }
 
@@ -455,19 +465,16 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
-      <TopBar icon="🍿" title="Movie Night" username={username} switchLabel="🍨 Scoop" onSwitch={onSwitch} />
-      <div className="max-w-5xl mx-auto px-6 pt-5 pb-6">
-        <p className="text-gray-400 font-semibold text-sm">Proposez vos films et votez ! 😊</p>
-      </div>
-      <div className="max-w-5xl mx-auto px-6 pb-8">
+      <TopBar icon="🍿" title="Movie Night" username={username} tagline="Proposez vos films et votez ! 😊" switchLabel="🍨 Scoop" onSwitch={onSwitch} />
+      <div className="max-w-5xl mx-auto px-6 pt-6 pb-8">
         <div className="bg-gray-50 border-2 border-gray-100 rounded-3xl p-5 flex flex-col gap-3">
           <p className="text-sm font-black text-gray-600 uppercase tracking-widest">Ajouter un film</p>
           <div className="flex gap-3">
             <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addMovie()} placeholder="Titre du film…"
               className="flex-1 bg-white border-2 border-gray-100 focus:border-[#bbced3] rounded-2xl px-4 py-2.5 text-sm font-semibold text-gray-700 placeholder:text-gray-300 placeholder:font-normal outline-none transition-colors"
             />
-            <button onClick={addMovie} className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-black px-5 py-2.5 rounded-2xl transition-colors whitespace-nowrap">
-              <Plus size={15} /> Ajouter
+            <button onClick={addMovie} className="flex items-center justify-center bg-gray-900 hover:bg-gray-700 text-white text-sm font-black px-4 py-2.5 rounded-2xl transition-colors whitespace-nowrap" aria-label="Ajouter un film">
+              <Plus size={15} />
             </button>
           </div>
           <div className="text-sm font-bold text-emerald-500 transition-all duration-300 leading-none" style={{ opacity: confirmed ? 1 : 0, transform: confirmed ? "translateY(0)" : "translateY(-4px)" }}>
@@ -673,19 +680,16 @@ function Scoop({ username, onSwitch }: { username: string; onSwitch: () => void 
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
-      <TopBar icon="🍨" title="Scoop" username={username} switchLabel="🍿 Movie Night" onSwitch={onSwitch} />
-      <div className="max-w-5xl mx-auto px-6 pt-5 pb-6">
-        <p className="text-gray-400 font-semibold text-sm">Le mur d&apos;idées du groupe ! ✨</p>
-      </div>
-      <div className="max-w-5xl mx-auto px-6 pb-8">
+      <TopBar icon="🍨" title="Scoop" username={username} tagline="Le mur d&apos;idées du groupe ! ✨" switchLabel="🍿 Movie Night" onSwitch={onSwitch} />
+      <div className="max-w-5xl mx-auto px-6 pt-6 pb-8">
         <div className="bg-gray-50 border-2 border-gray-100 rounded-3xl p-5 flex flex-col gap-3">
           <p className="text-sm font-black text-gray-600 uppercase tracking-widest">Ajouter une idée</p>
           <div className="flex gap-3">
             <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addIdea()} placeholder="Une idée à partager…"
               className="flex-1 bg-white border-2 border-gray-100 focus:border-[#bbced3] rounded-2xl px-4 py-2.5 text-sm font-semibold text-gray-700 placeholder:text-gray-300 placeholder:font-normal outline-none transition-colors"
             />
-            <button onClick={addIdea} className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-black px-5 py-2.5 rounded-2xl transition-colors whitespace-nowrap">
-              <Plus size={15} /> Ajouter
+            <button onClick={addIdea} className="flex items-center justify-center bg-gray-900 hover:bg-gray-700 text-white text-sm font-black px-4 py-2.5 rounded-2xl transition-colors whitespace-nowrap" aria-label="Ajouter une idée">
+              <Plus size={15} />
             </button>
           </div>
           <div className="text-sm font-bold text-emerald-500 transition-all duration-300 leading-none" style={{ opacity: confirmed ? 1 : 0, transform: confirmed ? "translateY(0)" : "translateY(-4px)" }}>
