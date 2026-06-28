@@ -20,7 +20,7 @@ Une application collaborative pour choisir le film de la soir√©e ou des activit√
 
 ---
 
-<img width="1866" height="963" alt="image" src="https://github.com/user-attachments/assets/d3336fe9-fd4e-45d8-b5ad-ce6dbbe26a80" />
+<img width="2506" height="1323" alt="image" src="https://github.com/user-attachments/assets/941e8b47-1562-4985-8eed-98497aac69f5" />
 
 ---
 
