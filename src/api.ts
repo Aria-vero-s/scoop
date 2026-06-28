@@ -118,3 +118,66 @@ export async function updateFilm(filmId: string, title: string) {
   await fbPatch(`films/${filmId}`, { title });
   return { ok: true };
 }
+
+// ─── Scoop (ideas) ──────────────────────────────────────────────────────────
+
+export async function getIdeas() {
+  const data = await fbGet("ideas");
+  if (!data) return [];
+  return Object.entries(data).map(([id, idea]: [string, any]) => ({ id, ...idea }));
+}
+
+export async function getIdeaComments() {
+  const data = await fbGet("idea_comments");
+  if (!data) return [];
+  const comments: { id: string; ideaId: string; author: string; text: string }[] = [];
+  for (const [ideaId, ideaComments] of Object.entries(data as Record<string, any>)) {
+    for (const [id, comment] of Object.entries(ideaComments as Record<string, any>)) {
+      comments.push({ id, ideaId, ...(comment as object) } as any);
+    }
+  }
+  return comments;
+}
+
+export async function createIdea(title: string, username: string) {
+  const result = await fbPost("ideas", {
+    title,
+    author: username,
+    createdAt: new Date().toISOString(),
+  });
+  if (!result?.name) throw new Error("Failed to create idea");
+  return { ok: true, id: result.name as string };
+}
+
+export async function addIdeaComment(ideaId: string, username: string, text: string) {
+  const result = await fbPost(`idea_comments/${ideaId}`, {
+    author: username,
+    text,
+    createdAt: new Date().toISOString(),
+  });
+  if (!result?.name) throw new Error("Failed to add idea comment");
+  return { ok: true, id: result.name as string };
+}
+
+export async function deleteIdeaComment(ideaId: string, commentId: string) {
+  await fbDelete(`idea_comments/${ideaId}/${commentId}`);
+  return { ok: true };
+}
+
+export async function updateIdeaComment(ideaId: string, commentId: string, text: string) {
+  await fbPatch(`idea_comments/${ideaId}/${commentId}`, { text });
+  return { ok: true };
+}
+
+export async function deleteIdea(ideaId: string) {
+  await Promise.all([
+    fbDelete(`ideas/${ideaId}`),
+    fbDelete(`idea_comments/${ideaId}`),
+  ]);
+  return { ok: true };
+}
+
+export async function updateIdea(ideaId: string, title: string) {
+  await fbPatch(`ideas/${ideaId}`, { title });
+  return { ok: true };
+}
