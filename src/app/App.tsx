@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { getFilms, getComments, getVotes, createFilm, voteFilm, unvoteFilm, addComment as addFilmCommentApi, deleteComment as deleteFilmCommentApi, updateComment as updateFilmCommentApi, deleteFilm, updateFilm, getIdeas, getIdeaComments, createIdea, addIdeaComment as addIdeaCommentApi, deleteIdeaComment as deleteIdeaCommentApi, updateIdeaComment as updateIdeaCommentApi, deleteIdea, updateIdea } from "../api";
+import { motion, AnimatePresence } from "motion/react";
 import { Heart, Plus, Send, Trophy, Trash2, Pencil, Check, X } from "lucide-react";
 
 // Inject Google Fonts once
@@ -25,6 +26,7 @@ interface Movie {
   votes: number;
   comments: Comment[];
   rotation: number;
+  createdAt: number;
 }
 
 interface Idea {
@@ -34,6 +36,7 @@ interface Idea {
   author: string;
   comments: Comment[];
   rotation: number;
+  createdAt: number;
 }
 
 const POSTIT_COLORS = [
@@ -186,34 +189,61 @@ function CommentSection({ comments, onAdd, onDelete, onEdit, username }: {
   );
 }
 
+type Tab = "movienight" | "events";
+
+// One spring for everything, so all motion feels consistent.
+const SPRING = { type: "spring", stiffness: 380, damping: 30, mass: 0.8 } as const;
+const SOFT_SPRING = { type: "spring", stiffness: 260, damping: 22 } as const;
+
+// Posts created before this date go in the "old posts" pile.
+const OLD_POST_CUTOFF = new Date("2026-09-01T00:00:00").getTime();
+
+function parseCreatedAt(v: unknown): number {
+  const t = typeof v === "string" || typeof v === "number" ? new Date(v).getTime() : NaN;
+  return Number.isFinite(t) ? t : 0;
+}
+
+function TabPill({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "movienight", label: "🍿 Movie Night" },
+    { id: "events", label: "🎉 Events" },
+  ];
+  return (
+    <div className="relative inline-flex bg-gray-200/70 rounded-full p-1">
+      <motion.span
+        className="absolute top-1 bottom-1 left-1 rounded-full bg-gray-900 shadow"
+        style={{ width: "calc(50% - 4px)" }}
+        initial={false}
+        animate={{ x: tab === "events" ? "100%" : "0%" }}
+        transition={SPRING}
+      />
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          aria-pressed={tab === t.id}
+          className={`relative z-10 flex-1 min-w-[7.5rem] px-4 py-1.5 text-xs sm:text-sm font-black rounded-full transition-colors duration-300 whitespace-nowrap ${tab === t.id ? "text-white" : "text-gray-500 hover:text-gray-800"}`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function TopBar({
   icon,
   title,
   username,
   tagline,
-  switchLabel,
-  onSwitch,
 }: {
   icon: string;
   title: string;
   username: string;
   tagline: string;
-  switchLabel: string;
-  onSwitch: () => void;
 }) {
   return (
     <>
-      <div className="w-full bg-gray-50 border-b border-gray-100 py-4">
-        <div className="max-w-5xl mx-auto px-6 flex justify-end">
-          <button
-            onClick={onSwitch}
-            className="text-sm font-black text-gray-600 uppercase tracking-widest hover:text-gray-800 transition-colors"
-          >
-            Aller sur {switchLabel}
-          </button>
-        </div>
-      </div>
-
       <div className="max-w-5xl mx-auto px-6 pt-8">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -227,6 +257,98 @@ function TopBar({
         </div>
         <p className="mt-3 text-sm font-semibold text-gray-600">{tagline}</p>
       </div>
+    </>
+  );
+}
+
+// Row-major grid: items keep their slot regardless of other cards' heights
+// (CSS multi-column layout was rebalancing columns on every change).
+function PostGrid<T extends { stableKey: string; createdAt: number }>({ items, render }: {
+  items: T[];
+  render: (item: T) => React.ReactNode;
+}) {
+  const [showOld, setShowOld] = useState(false);
+  // Posts missing a date (createdAt = 0) count as old.
+  const isOld = (i: T) => i.createdAt < OLD_POST_CUTOFF;
+  const recent = items.filter((i) => !isOld(i));
+  const old = items.filter(isOld);
+  const grid = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start";
+  return (
+    <>
+      {recent.length > 0 && (
+        <div className={grid}>
+          <AnimatePresence initial={false} mode="popLayout">
+            {recent.map((item) => (
+              <motion.div
+                key={item.stableKey}
+                layout="position"
+                initial={{ scale: 0.6, y: -24 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0, transition: { duration: 0.2, ease: "easeIn" } }}
+                transition={{ ...SOFT_SPRING, layout: SPRING }}
+              >{render(item)}</motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+      {old.length > 0 && (
+        <div className={recent.length > 0 ? "mt-10" : ""}>
+          <AnimatePresence initial={false} mode="wait">
+          {showOld ? (
+            <motion.div
+              key="open"
+              // Unfold the whole section downward; overflow is only clipped while it moves.
+              initial={{ height: 0, overflow: "hidden" }}
+              animate={{ height: "auto", transitionEnd: { overflow: "visible" } }}
+              exit={{ height: 0, overflow: "hidden" }}
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              style={{ padding: "0 4px", margin: "0 -4px" }}
+            >
+              <button onClick={() => setShowOld(false)} className="mb-5 text-sm font-black text-gray-600 uppercase tracking-widest hover:text-gray-800 transition-colors">
+                ▾ Anciens posts ({old.length}) — replier
+              </button>
+              <div className={grid}>
+                <AnimatePresence initial={false} mode="popLayout">
+                  {old.map((item) => (
+                    <motion.div
+                      key={item.stableKey}
+                      layout="position"
+                      exit={{ scale: 0, transition: { duration: 0.2, ease: "easeIn" } }}
+                      transition={{ layout: SPRING }}
+                    >{render(item)}</motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.button
+              key="pile"
+              onClick={() => setShowOld(true)}
+              className="group relative block w-full sm:w-72 h-36 text-left"
+              aria-label="Afficher les anciens posts"
+              initial={{ scale: 0.9, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              transition={SOFT_SPRING}
+            >
+              {[...POSTIT_COLORS.slice(0, Math.min(3, old.length))].reverse().map((c, i, arr) => {
+                const depth = arr.length - 1 - i;
+                return (
+                  <span key={i} className="absolute inset-0 rounded-sm transition-transform duration-300"
+                    style={{ backgroundColor: c.bg, borderTop: `3px solid ${c.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      transform: `translate(${depth * 6}px, ${depth * 6}px) rotate(${depth === 0 ? -1 : depth * 2.5}deg)` }} />
+                );
+              })}
+              <span className="absolute inset-0 p-4 flex flex-col justify-center">
+                <span className="text-sm font-black text-gray-700 uppercase tracking-widest">📦 Anciens posts</span>
+                <span className="text-xs font-semibold text-gray-500 mt-1">{old.length} post{old.length !== 1 ? "s" : ""} — cliquer pour ouvrir</span>
+              </span>
+            </motion.button>
+          )}
+          </AnimatePresence>
+        </div>
+      )}
     </>
   );
 }
@@ -247,14 +369,18 @@ function MoviePostIt({ movie, isWinner, isOwner, voted, username, onToggleVote, 
   function cancelEdit() { setEditVal(movie.title); setEditing(false); }
 
   return (
-    <div
+    <motion.div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      initial={false}
+      animate={{ rotate: hovered || editing ? 0 : movie.rotation, y: hovered || editing ? -4 : 0 }}
+      transition={SOFT_SPRING}
       style={{
         backgroundColor: color.bg,
         borderTop: `3px solid ${color.border}`,
-        transform: `rotate(${hovered || editing ? 0 : movie.rotation}deg) ${hovered || editing ? "scale(1.02)" : "scale(1)"}`,
-        transition: "transform 0.25s ease, box-shadow 0.25s ease",
+        transition: "box-shadow 0.3s ease",
+        backfaceVisibility: "hidden",
+        WebkitFontSmoothing: "antialiased",
         boxShadow: hovered ? "0 8px 24px rgba(0,0,0,0.13)" : isWinner ? "0 4px 16px rgba(244,114,182,0.18), 0 1px 4px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.08)",
       }}
       className="rounded-sm p-4 w-full break-words cursor-default select-text"
@@ -294,11 +420,11 @@ function MoviePostIt({ movie, isWinner, isOwner, voted, username, onToggleVote, 
         </div>
       </div>
       <CommentSection comments={movie.comments} onAdd={onComment} onDelete={onDeleteComment} onEdit={onEditComment} username={username} />
-    </div>
+    </motion.div>
   );
 }
 
-function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => void }) {
+function MovieNight({ username }: { username: string }) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
   const [input, setInput] = useState("");
@@ -349,8 +475,9 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
           votes: Number(payload.votes ?? voteCounts.get(movieId) ?? payload[4] ?? 0),
           comments: commentsByFilmId.get(movieId) ?? [],
           rotation: pickRotation(movieId),
+          createdAt: parseCreatedAt(payload.createdAt),
         };
-      }).sort((a, b) => b.votes - a.votes)
+      }).sort((a, b) => a.createdAt - b.createdAt)
     );
     setVotedIds(userVotedFilmIds);
   }
@@ -369,7 +496,6 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
         const aIsWinner = winnerMovieIds.has(a.movie.id);
         const bIsWinner = winnerMovieIds.has(b.movie.id);
         if (aIsWinner !== bIsWinner) return aIsWinner ? -1 : 1;
-        if (a.movie.votes !== b.movie.votes) return b.movie.votes - a.movie.votes;
         return a.index - b.index;
       })
       .map(({ movie }) => movie);
@@ -379,7 +505,7 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
     const title = input.trim();
     if (!title) return;
     const tempId = crypto.randomUUID();
-    const optimisticMovie: Movie = { id: tempId, stableKey: tempId, title, author: username, votes: 0, comments: [], rotation: pickRotation(tempId) };
+    const optimisticMovie: Movie = { id: tempId, stableKey: tempId, title, author: username, votes: 0, comments: [], rotation: pickRotation(tempId), createdAt: Date.now() };
     const previousMovies = [...movies];
     setMovies((prev) => [...prev, optimisticMovie]);
     setInput(""); setConfirmed(true);
@@ -387,7 +513,7 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
     try {
       const result = await createFilm(title, username);
       if (!result?.ok) { setMovies(previousMovies); return; }
-      setMovies((prev) => prev.map((m) => m.id === tempId ? { ...m, id: result.id } : m));
+      setMovies((prev) => prev.map((m) => m.id === tempId ? { ...m, id: result.id, rotation: pickRotation(result.id) } : m));
     } catch (error) { setMovies(previousMovies); console.error("Failed to create film", error); }
   }
 
@@ -465,7 +591,7 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
-      <TopBar icon="🍿" title="Movie Night" username={username} tagline="Proposez vos films et votez ! 😊" switchLabel="🍨 Scoop" onSwitch={onSwitch} />
+      <TopBar icon="🍿" title="Movie Night" username={username} tagline="Proposez vos films et votez ! 😊" />
       <div className="max-w-5xl mx-auto px-6 pt-6 pb-8">
         <div className="bg-gray-50 border-2 border-gray-100 rounded-3xl p-5 flex flex-col gap-3">
           <p className="text-sm font-black text-gray-600 uppercase tracking-widest">Ajouter un film</p>
@@ -492,23 +618,19 @@ function MovieNight({ username, onSwitch }: { username: string; onSwitch: () => 
             <p className="text-gray-400 font-semibold">Aucun film pour l&apos;instant — soyez le premier !</p>
           </div>
         ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5" style={{ columnFill: "balance" }}>
-            {sortedMovies.map((movie) => (
-              <div key={movie.stableKey} className="mb-5 break-inside-avoid block w-full">
+          <PostGrid items={sortedMovies} render={(movie) => (
                 <MoviePostIt movie={movie} isWinner={winnerMovieIds.has(movie.id)} isOwner={movie.author === username} voted={votedIds.has(movie.id)} username={username}
                   onToggleVote={() => toggleVote(movie.id)} onComment={(t) => addComment(movie.id, t)} onDelete={() => deleteMovie(movie.id)} onEdit={(t) => editMovie(movie.id, t)}
                   onDeleteComment={(commentId) => deleteCommentFromFilm(movie.id, commentId)} onEditComment={(commentId, newText) => editCommentInFilm(movie.id, commentId, newText)}
                 />
-              </div>
-            ))}
-          </div>
+          )} />
         )}
       </div>
     </div>
   );
 }
 
-// ─── SCOOP ───────────────────────────────────────────────────────────────────
+// ─── EVENTS ───────────────────────────────────────────────────────────────────
 
 function IdeaPostIt({ idea, isOwner, username, onComment, onDelete, onEdit, onDeleteComment, onEditComment }: {
   idea: Idea; isOwner: boolean;
@@ -526,14 +648,18 @@ function IdeaPostIt({ idea, isOwner, username, onComment, onDelete, onEdit, onDe
   function cancelEdit() { setEditVal(idea.title); setEditing(false); }
 
   return (
-    <div
+    <motion.div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      initial={false}
+      animate={{ rotate: hovered || editing ? 0 : idea.rotation, y: hovered || editing ? -4 : 0 }}
+      transition={SOFT_SPRING}
       style={{
         backgroundColor: color.bg,
         borderTop: `3px solid ${color.border}`,
-        transform: `rotate(${hovered || editing ? 0 : idea.rotation}deg) ${hovered || editing ? "scale(1.02)" : "scale(1)"}`,
-        transition: "transform 0.25s ease, box-shadow 0.25s ease",
+        transition: "box-shadow 0.3s ease",
+        backfaceVisibility: "hidden",
+        WebkitFontSmoothing: "antialiased",
         boxShadow: hovered ? "0 8px 24px rgba(0,0,0,0.13)" : "0 2px 8px rgba(0,0,0,0.08)",
       }}
       className="rounded-sm p-4 w-full break-words cursor-default select-text"
@@ -567,11 +693,11 @@ function IdeaPostIt({ idea, isOwner, username, onComment, onDelete, onEdit, onDe
         </div>
       </div>
       <CommentSection comments={idea.comments} onAdd={onComment} onDelete={onDeleteComment} onEdit={onEditComment} username={username} />
-    </div>
+    </motion.div>
   );
 }
 
-function Scoop({ username, onSwitch }: { username: string; onSwitch: () => void }) {
+function Events({ username }: { username: string }) {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [input, setInput] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -597,8 +723,8 @@ function Scoop({ username, onSwitch }: { username: string; onSwitch: () => void 
       ideaItems.map((idea: any, index: number) => {
         const payload = idea && typeof idea === "object" ? idea : { id: idea };
         const ideaId = String(payload.id ?? index);
-        return { id: ideaId, stableKey: ideaId, title: payload.title ?? "", author: payload.author ?? "Anonyme", comments: commentsByIdeaId.get(ideaId) ?? [], rotation: pickRotation(ideaId) };
-      })
+        return { id: ideaId, stableKey: ideaId, title: payload.title ?? "", author: payload.author ?? "Anonyme", comments: commentsByIdeaId.get(ideaId) ?? [], rotation: pickRotation(ideaId), createdAt: parseCreatedAt(payload.createdAt) };
+      }).sort((a, b) => a.createdAt - b.createdAt)
     );
   }
 
@@ -608,7 +734,7 @@ function Scoop({ username, onSwitch }: { username: string; onSwitch: () => void 
     const title = input.trim();
     if (!title) return;
     const tempId = crypto.randomUUID();
-    const optimisticIdea: Idea = { id: tempId, stableKey: tempId, title, author: username, comments: [], rotation: pickRotation(tempId) };
+    const optimisticIdea: Idea = { id: tempId, stableKey: tempId, title, author: username, comments: [], rotation: pickRotation(tempId), createdAt: Date.now() };
     const previousIdeas = [...ideas];
     setIdeas((prev) => [...prev, optimisticIdea]);
     setInput(""); setConfirmed(true);
@@ -616,7 +742,7 @@ function Scoop({ username, onSwitch }: { username: string; onSwitch: () => void 
     try {
       const result = await createIdea(title, username);
       if (!result?.ok) { setIdeas(previousIdeas); return; }
-      setIdeas((prev) => prev.map((i) => i.id === tempId ? { ...i, id: result.id } : i));
+      setIdeas((prev) => prev.map((i) => i.id === tempId ? { ...i, id: result.id, rotation: pickRotation(result.id) } : i));
     } catch (error) { setIdeas(previousIdeas); console.error("Failed to create idea", error); }
   }
 
@@ -680,7 +806,7 @@ function Scoop({ username, onSwitch }: { username: string; onSwitch: () => void 
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
-      <TopBar icon="🍨" title="Scoop" username={username} tagline="Le mur d&apos;idées du groupe ! ✨" switchLabel="🍿 Movie Night" onSwitch={onSwitch} />
+      <TopBar icon="🎉" title="Events" username={username} tagline="Le mur d&apos;idées du groupe ! ✨" />
       <div className="max-w-5xl mx-auto px-6 pt-6 pb-8">
         <div className="bg-gray-50 border-2 border-gray-100 rounded-3xl p-5 flex flex-col gap-3">
           <p className="text-sm font-black text-gray-600 uppercase tracking-widest">Ajouter une idée</p>
@@ -708,16 +834,12 @@ function Scoop({ username, onSwitch }: { username: string; onSwitch: () => void 
             <p className="text-gray-400 font-semibold text-sm">Ajoutez la première inspiration du groupe.</p>
           </div>
         ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5" style={{ columnFill: "balance" }}>
-            {ideas.map((idea) => (
-              <div key={idea.stableKey} className="mb-5 break-inside-avoid block w-full">
+          <PostGrid items={ideas} render={(idea) => (
                 <IdeaPostIt idea={idea} isOwner={idea.author === username} username={username}
                   onComment={(t) => addIdeaCommentFn(idea.id, t)} onDelete={() => deleteIdeaFn(idea.id)} onEdit={(t) => editIdeaFn(idea.id, t)}
                   onDeleteComment={(commentId) => deleteIdeaCommentFn(idea.id, commentId)} onEditComment={(commentId, newText) => editIdeaCommentFn(idea.id, commentId, newText)}
                 />
-              </div>
-            ))}
-          </div>
+          )} />
         )}
       </div>
     </div>
@@ -762,13 +884,52 @@ function UsernameGate({ onEnter }: { onEnter: (name: string) => void }) {
   );
 }
 
+// Both pages stay mounted (no reload flash), laid side by side; the strip slides between them.
+// Once the slide finishes, the hidden page is collapsed so it doesn't add scroll height.
+function PageSlider({ tab, pages }: { tab: Tab; pages: Record<Tab, React.ReactNode> }) {
+  const order: Tab[] = ["movienight", "events"];
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    setMoving(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [tab]);
+  return (
+    <div style={{ overflowX: "clip" }}>
+      <motion.div
+        className="flex items-start"
+        initial={false}
+        animate={{ x: tab === "events" ? "-100%" : "0%" }}
+        transition={{ type: "spring", stiffness: 220, damping: 32 }}
+        onAnimationComplete={() => setMoving(false)}
+      >
+        {order.map((t) => (
+          <div key={t} className="w-full shrink-0" aria-hidden={t !== tab}
+            style={t !== tab && !moving ? { height: 0, overflow: "hidden" } : undefined}>
+            {pages[t]}
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [username, setUsername] = useState<string | null>(null);
-  const [app, setApp] = useState<"movienight" | "scoop">("movienight");
+  const [tab, setTab] = useState<Tab>("movienight");
 
   if (!username) return <UsernameGate onEnter={setUsername} />;
-  if (app === "movienight") return <MovieNight username={username} onSwitch={() => setApp("scoop")} />;
-  return <Scoop username={username} onSwitch={() => setApp("movienight")} />;
+  // The header stays mounted across tabs so the pill can slide instead of jumping.
+  return (
+    <div className="min-h-screen bg-white" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
+      <div className="w-full bg-gray-50 border-b border-gray-100 py-3">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3">
+          <span className="text-lg font-black text-gray-900 tracking-tight whitespace-nowrap">🍨 Scoop</span>
+          <TabPill tab={tab} onChange={setTab} />
+        </div>
+      </div>
+      <PageSlider tab={tab} pages={{ movienight: <MovieNight username={username} />, events: <Events username={username} /> }} />
+    </div>
+  );
 }
